@@ -1,0 +1,34 @@
+[project]
+name = "aiida-photometry"
+version = "0.1.0a0"
+readme = "README.md"
+license = {file = 'LICENSE'}
+description = "plugin for photometry"
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Framework :: AiiDA",
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+
+]
+requires-python = ">=3.9"
+dependencies = [
+    "aiida-core>=1.6.5,<3.0.0",
+]
+
+[project.entry-points."aiida.workflows"]
+"fill.mat" = "workflows.fill_workflow:FillWorkflow"
+
+[tool.pylint.format]
+max-line-length = 125
+
+[tool.pylint.messages_control]
+disable = [
+    "too-many-ancestors",
+    "invalid-name",
+    "duplicate-code",
+    "too-many-locals",
+    "too-many-statements",
+]
