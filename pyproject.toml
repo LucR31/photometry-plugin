@@ -20,6 +20,7 @@ dependencies = [
 
 [project.entry-points."aiida.workflows"]
 "fill.mat" = "workflows.fill_workflow:FillWorkflow"
+"images.reduction" = "workflows.data_reduction:DataReduction"
 
 [tool.pylint.format]
 max-line-length = 125

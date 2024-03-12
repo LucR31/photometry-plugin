@@ -1,0 +1,3 @@
+[aiida.workflows]
+fill.mat = workflows.fill_workflow:FillWorkflow
+images.reduction = workflows.data_reduction:DataReduction
