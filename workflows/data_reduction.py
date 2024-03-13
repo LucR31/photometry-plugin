@@ -17,6 +17,10 @@ def combine_(images, comb_method):
     return combined_bias
 
 @calcfunction
+def apply_calibration(bias,dark,flat,image):
+    return orm.Int(2)
+
+@calcfunction
 def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
     """
     Convenience function for combining multiple images and types and save
@@ -45,6 +49,7 @@ def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
         combined_bias = combine_(biases_im, comb_method)
         combined_bias.meta['combined'] = True
         combined_bias.write(calibrated_path.value+'/combined_bias.fit')
+        return orm.SinglefileData(calibrated_path.value+'/combined_bias.fit')
 
     elif imagetyp == 'Dark Frame':
         darks = im_collection.summary['imagetyp'] == 'Dark Frame'
@@ -56,39 +61,45 @@ def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
             combined_dark.meta['combined'] = True
             dark_file_name = '/combined_dark_{:6.3f}.fit'.format(et)
             combined_dark.write(calibrated_path.value + dark_file_name)
+        return orm.SinglefileData(calibrated_path.value + dark_file_name)
 
     elif imagetyp == 'Flat Frame':
         flat_filters = set(h['filter'] for h in im_collection.headers(imagetyp='Flat Frame'))
+        #flat_file_name =''
         for filt in flat_filters:
             flats_im = im_collection.files_filtered(imagetyp=imagetyp,
                                                      filter=filt,
                                                      include_path=True)
             combined_flat = combine_(flats_im, comb_method)
             combined_flat.meta['combined'] = True
-            dark_file_name = '/combined_flat_filter_{}.fit'.format(filt.replace("''", "p"))
-            combined_flat.write(calibrated_path.value + dark_file_name)
+            flat_file_name = '/combined_flat_filter_{}.fit'.format(filt.replace("''", "p"))
+            combined_flat.write(calibrated_path.value + flat_file_name)
+        #return orm.SinglefileData(calibrated_path.value + flat_file_name)
              
 class DataReduction(engine.WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
         spec.input('directory_input', valid_type = orm.Str)
+        spec.input('image', valid_type = orm.Str)
         spec.input('directory_output', valid_type = orm.Str)
         spec.input('aggregate_method', valid_type = orm.Str)
-        
+        spec.outputs.dynamic = True
         spec.outline(
             cls.agg_bias,
             cls.agg_dark,
-            cls.agg_flat
+            cls.agg_flat,
+            cls.apply_cal,
+            cls.result_cal
         )
 
     def agg_bias(self):
-        make_masters(self.inputs.directory_input,
+        self.ctx.bias = make_masters(self.inputs.directory_input,
                      self.inputs.directory_output,
                     'Bias Frame',
                      self.inputs.aggregate_method)
     def agg_dark(self):
-        make_masters(self.inputs.directory_input,
+        self.ctx.dark = make_masters(self.inputs.directory_input,
                      self.inputs.directory_output,
                     'Dark Frame',
                      self.inputs.aggregate_method)
@@ -97,6 +108,13 @@ class DataReduction(engine.WorkChain):
                      self.inputs.directory_output,
                     'Flat Frame',
                      self.inputs.aggregate_method)
+    def apply_cal(self):
+        self.ctx.res = apply_calibration(self.ctx.bias,
+                                         self.ctx.dark,
+                                         self.ctx.bias,
+                                         self.inputs.image)
+    def result_cal(self):
+        self.out('result', self.ctx.bias)
 
     
 

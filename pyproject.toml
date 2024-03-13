@@ -18,6 +18,9 @@ dependencies = [
     "aiida-core>=1.6.5,<3.0.0",
 ]
 
+[project.entry-points."aiida.data"]
+"super.fitsdata" = "data.fit_data:FitsData"
+
 [project.entry-points."aiida.workflows"]
 "fill.mat" = "workflows.fill_workflow:FillWorkflow"
 "images.reduction" = "workflows.data_reduction:DataReduction"
