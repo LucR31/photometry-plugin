@@ -1,13 +1,15 @@
 from aiida.engine import calcfunction
 from aiida.orm import Int, ArrayData, Float
-from aiida import orm, engine
+from aiida import orm, engine, plugin
+
 import numpy as np
- 
 import os
 from astropy.io import fits
 from ccdproc import ImageFileCollection,combine
 
-def combine_(images, comb_method):
+FITSDATA = plugin.DataFactory('super.fitsdata')
+
+def combine_images(images, comb_method):
     combined_bias = combine(images,
                             method=comb_method,
                             sigma_clip=True, sigma_clip_low_thresh=5, sigma_clip_high_thresh=5,
@@ -17,8 +19,17 @@ def combine_(images, comb_method):
     return combined_bias
 
 @calcfunction
+def make_bias_master(path_collection, calibrated_path, comb_method):
+    im_collection = ImageFileCollection(path_collection.value)
+    biases_im = im_collection.files_filtered(imagetyp='Bias Frame', include_path=True)
+    combined_bias = combine_images(biases_im, comb_method)
+    combined_bias.meta['combined'] = True
+    combined_bias.write(calibrated_path.value+'/combined_bias.fit')
+    return FITSDATA(calibrated_path.value+'/combined_bias.fit')
+
+@calcfunction
 def apply_calibration(bias,dark,flat,image):
-    return orm.Int(2)
+    pass
 
 @calcfunction
 def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
@@ -36,7 +47,7 @@ def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
         Dark Frame and Flat Frame.
 
     comb_method: str
-        Method for cimbinin the images. Options:
+        Method for combining the images. Options:
         average, sum and median
 
     Returns
@@ -44,20 +55,13 @@ def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
     """
     im_collection = ImageFileCollection(path_collection.value)
 
-    if imagetyp == 'Bias Frame':
-        biases_im = im_collection.files_filtered(imagetyp=imagetyp, include_path=True)
-        combined_bias = combine_(biases_im, comb_method)
-        combined_bias.meta['combined'] = True
-        combined_bias.write(calibrated_path.value+'/combined_bias.fit')
-        return orm.SinglefileData(calibrated_path.value+'/combined_bias.fit')
-
-    elif imagetyp == 'Dark Frame':
+    if imagetyp == 'Dark Frame':
         darks = im_collection.summary['imagetyp'] == 'Dark Frame'
         for et in sorted(set(im_collection.summary['exptime'][darks])):
             darks_im = im_collection.files_filtered(imagetyp=imagetyp,
                                                      exptime=et,
                                                      include_path=True)
-            combined_dark = combine_(darks_im, comb_method)
+            combined_dark = combine_images(darks_im, comb_method)
             combined_dark.meta['combined'] = True
             dark_file_name = '/combined_dark_{:6.3f}.fit'.format(et)
             combined_dark.write(calibrated_path.value + dark_file_name)
@@ -70,7 +74,7 @@ def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
             flats_im = im_collection.files_filtered(imagetyp=imagetyp,
                                                      filter=filt,
                                                      include_path=True)
-            combined_flat = combine_(flats_im, comb_method)
+            combined_flat = combine_images(flats_im, comb_method)
             combined_flat.meta['combined'] = True
             flat_file_name = '/combined_flat_filter_{}.fit'.format(filt.replace("''", "p"))
             combined_flat.write(calibrated_path.value + flat_file_name)
@@ -87,16 +91,15 @@ class DataReduction(engine.WorkChain):
         spec.outputs.dynamic = True
         spec.outline(
             cls.agg_bias,
-            cls.agg_dark,
-            cls.agg_flat,
-            cls.apply_cal,
+            #cls.agg_dark,
+            #cls.agg_flat,
+            #cls.apply_cal,
             cls.result_cal
         )
 
     def agg_bias(self):
-        self.ctx.bias = make_masters(self.inputs.directory_input,
+        self.ctx.bias = make_bias_master(self.inputs.directory_input,
                      self.inputs.directory_output,
-                    'Bias Frame',
                      self.inputs.aggregate_method)
     def agg_dark(self):
         self.ctx.dark = make_masters(self.inputs.directory_input,
