@@ -9,20 +9,29 @@ from ccdproc import ImageFileCollection,combine
 
 FITSDATA = plugin.DataFactory('super.fitsdata')
 
-def combine_images(images, comb_method):
-    combined_bias = combine(images,
-                            method=comb_method,
-                            sigma_clip=True, sigma_clip_low_thresh=5, sigma_clip_high_thresh=5,
-                            sigma_clip_func=np.ma.median,
-                            mem_limit=350e6,unit='adu',
-                            )
-    return combined_bias
+def combine_images(images:ImageFileCollection,
+                   comb_method:str,
+                   dict_params:dict):
+    """
+    Combines previously calibrated images
+    See 'astropy.org' for a detail description
+    """
+    return combine(images, method=comb_method, **dict_params)
 
 @calcfunction
-def make_bias_master(path_collection, calibrated_path, comb_method):
+def make_bias_master(path_collection:orm.Str,
+                     calibrated_path:orm.Str, 
+                     comb_method:orm.Str,
+                     comb_params_dict:orm.Dict):
+    """
+    Returns a FITS file with the combined bias
+    """
     im_collection = ImageFileCollection(path_collection.value)
-    biases_im = im_collection.files_filtered(imagetyp='Bias Frame', include_path=True)
-    combined_bias = combine_images(biases_im, comb_method)
+    biases_im = im_collection.files_filtered(imagetyp='Bias Frame',
+                                             include_path=True)
+    combined_bias = combine_images(biases_im, 
+                                   comb_method, 
+                                   comb_params_dict)
     combined_bias.meta['combined'] = True
     combined_bias.write(calibrated_path.value+'/combined_bias.fit')
     return FITSDATA(calibrated_path.value+'/combined_bias.fit')
@@ -81,6 +90,7 @@ def make_masters(path_collection, calibrated_path, imagetyp, comb_method):
         #return orm.SinglefileData(calibrated_path.value + flat_file_name)
              
 class DataReduction(engine.WorkChain):
+
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -88,6 +98,8 @@ class DataReduction(engine.WorkChain):
         spec.input('image', valid_type = orm.Str)
         spec.input('directory_output', valid_type = orm.Str)
         spec.input('aggregate_method', valid_type = orm.Str)
+        spec.input('combination_params', valid_type = orm.Dict)
+
         spec.outputs.dynamic = True
         spec.outline(
             cls.agg_bias,
@@ -98,9 +110,12 @@ class DataReduction(engine.WorkChain):
         )
 
     def agg_bias(self):
+        #Aggragation of bias images
         self.ctx.bias = make_bias_master(self.inputs.directory_input,
                      self.inputs.directory_output,
-                     self.inputs.aggregate_method)
+                     self.inputs.aggregate_method,
+                     self.inputs.comb_params_dict)
+        
     def agg_dark(self):
         self.ctx.dark = make_masters(self.inputs.directory_input,
                      self.inputs.directory_output,
