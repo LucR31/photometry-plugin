@@ -1,7 +1,6 @@
 from aiida.engine import calcfunction
-from aiida.orm import Int, ArrayData, Float
 from aiida import orm, engine, plugins
-from astropy.stats import mad_std
+from astropy.nddata import CCDData
 
 import numpy as np
 import os
@@ -10,24 +9,41 @@ import ccdproc
 
 FITSDATA = plugins.DataFactory('fits.data')
 
+def get_image_by_type(path_collection:str,
+                      image_type:str)->ccdproc.ImageFileCollection:
+    # Utility function to return images of a certain image type, i.e., BIAS, DARKS...
+    im_collection = ccdproc.ImageFileCollection(path_collection)
+    return im_collection.files_filtered(imagetyp=image_type,
+                                        include_path=True)
+
+@calcfunction
+def sub_overscan(path_collection:orm.Str,
+                 image_type:str):
+    images = get_image_by_type(path_collection.value, image_type)
+    first_bias = CCDData.read(images[0], unit='adu')
+    result_substraction = ccdproc.subtract_overscan(first_bias,
+                                     overscan=first_bias[:, 2055:], 
+                                     median=True)
+    return FITSDATA(result_substraction)
+
+@calcfunction
+def trim_image(image_to_trim):
+    trimmed_image = ccdproc.trim_image(image_to_trim[:, :2048])
+    return FITSDATA(trimmed_image)
+
 @calcfunction
 def make_bias_master(path_collection:orm.Str,
                      calibrated_path:orm.Str, 
                      comb_method:orm.Str,
-                     #comb_params_dict:orm.Dict
+                     comb_params_dict:orm.Dict
                      ):
     """
     Returns a FITS file with the combined bias
     """
-    im_collection = ccdproc.ImageFileCollection(path_collection.value)
-    biases_im = im_collection.files_filtered(imagetyp='Bias Frame',
-                                             include_path=True)
+    biases_im = get_image_by_type(path_collection.value, 'Bias Frame')
     combined_bias = ccdproc.combine(biases_im, 
                             method=comb_method, 
-                            #**comb_params_dict
-                            sigma_clip=True, sigma_clip_low_thresh=5, sigma_clip_high_thresh=5,
-                            sigma_clip_func=np.ma.median, sigma_clip_dev_func=mad_std,
-                            mem_limit=350e6,unit='adu',
+                            **comb_params_dict
                             )
     combined_bias.meta['combined'] = True
     combined_bias.write(calibrated_path.value+'/combined_bias.fit')
@@ -40,9 +56,8 @@ class DataReduction(engine.WorkChain):
         super().define(spec)
         spec.input('directory_input', valid_type = orm.Str)
         spec.input('directory_output', valid_type = orm.Str)
-        spec.input('aggregate_method', valid_type = orm.Str)
-        spec.input('combination_params', valid_type = orm.Dict, 
-                                         required = False)
+        spec.input('aggregate_method', valid_type = orm.Str, help = '')
+        spec.input('combination_params', valid_type = orm.Dict, help = '')
 
         spec.outputs.dynamic = True
         spec.outline(
@@ -51,11 +66,10 @@ class DataReduction(engine.WorkChain):
         )
 
     def agg_bias(self):
-        #Aggragation of bias images
         self.ctx.bias = make_bias_master(self.inputs.directory_input,
                                          self.inputs.directory_output,
                                          self.inputs.aggregate_method,
-                                         #self.inputs.comb_params_dict
+                                         self.inputs.comb_params_dict
                                          )
         
     def result_cal(self):
