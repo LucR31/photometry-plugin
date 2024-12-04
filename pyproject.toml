@@ -26,9 +26,9 @@ dependencies = [
 ]
 
 [project.entry-points."aiida.data"]
-"super.fitsdata" = "data.fit_data:FitsData"
+"fits.data" = "aiida_photometry.data.fits_data:FitsData"
 
 [project.entry-points."aiida.workflows"]
-"fill.mat" = "workflows.fill_workflow:FillWorkflow"
-"images.reduction" = "workflows.data_reduction:DataReduction"
+"fill.mat" = "aiida_photometry.workflows.fill_workflow:FillWorkflow"
+"images.reduction" = "aiida_photometry.workflows.data_reduction:DataReduction"
 

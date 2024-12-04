@@ -20,7 +20,7 @@ builder = workflow.get_builder()
 #filling builder
 builder.directory_input = orm.Str('/home/jovyan/files')
 builder.directory_output = orm.Str('/home/jovyan/calibrated')
-builder.image = orm.Str('image/path')
+#builder.image = orm.Str('image/path')
 builder.aggregate_method = orm.Str('average')
 #run
 engine.run(builder)
