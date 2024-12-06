@@ -8,11 +8,9 @@ Data:
 - `fits.data`: FITS data plugin
 
 Workflows:
-- `images.reduction`: Workflow for data reduction 
+- `images.reduction`: Workflow for data reduction
 
 
-### Contact 
+### Contact
 
-Lucas Fernandez,<br>
 lucas.fernandez3132@gmail.com
-
