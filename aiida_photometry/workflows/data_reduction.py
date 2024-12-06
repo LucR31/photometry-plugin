@@ -1,6 +1,7 @@
 from aiida.engine import calcfunction
 from aiida import orm, engine, plugins
 from astropy.nddata import CCDData
+from aiida_photometry.utils import get_image_by_type
 
 import numpy as np
 import os
@@ -8,13 +9,6 @@ from astropy.io import fits
 import ccdproc
 
 FITSDATA = plugins.DataFactory('fits.data')
-
-def get_image_by_type(path_collection:str,
-                      image_type:str)->ccdproc.ImageFileCollection:
-    # Utility function to return images of a certain image type, i.e., BIAS, DARKS...
-    im_collection = ccdproc.ImageFileCollection(path_collection)
-    return im_collection.files_filtered(imagetyp=image_type,
-                                        include_path=True)
 
 @calcfunction
 def sub_overscan(path_collection:orm.Str,
@@ -69,7 +63,7 @@ class DataReduction(engine.WorkChain):
         self.ctx.bias = make_bias_master(self.inputs.directory_input,
                                          self.inputs.directory_output,
                                          self.inputs.aggregate_method,
-                                         self.inputs.comb_params_dict
+                                         self.inputs.combination_params
                                          )
         
     def result_cal(self):
