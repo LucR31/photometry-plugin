@@ -7,9 +7,10 @@ from aiida_photometry.utils import get_image_by_type
 from astropy.nddata import CCDData
 import ccdproc
 
+
 FITSDATA = plugins.DataFactory("fits.data")
 
-# TODO
+
 @calcfunction
 def sub_overscan(path_collection: orm.Str, image_type: str):
     images = get_image_by_type(path_collection.value, image_type)
@@ -20,7 +21,6 @@ def sub_overscan(path_collection: orm.Str, image_type: str):
     return FITSDATA(result_substraction)
 
 
-# TODO
 @calcfunction
 def trim_image(image_to_trim):
     trimmed_image = ccdproc.trim_image(image_to_trim[:, :2048])
@@ -40,7 +40,7 @@ def make_bias_master(
     biases_im = get_image_by_type(path_collection.value, "Bias Frame")
     combined_bias = ccdproc.combine(biases_im, method=comb_method, **comb_params_dict)
     combined_bias.meta["combined"] = True
-    combined_bias.write(calibrated_path.value + "/combined_bias.fit")
+    combined_bias.write(calibrated_path.value + "/combined_bias.fit", overwrite=True)
     return FITSDATA(calibrated_path.value + "/combined_bias.fit")
 
 
@@ -65,4 +65,4 @@ class DataReduction(engine.WorkChain):
         )
 
     def result_cal(self):
-        self.out("result", self.ctx.bias)
+        self.out("result", self.ctx.result)
