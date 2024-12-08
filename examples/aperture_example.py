@@ -4,17 +4,20 @@ from photutils.datasets import load_star_image
 import numpy as np
 from astropy.io import fits
 
+FITSDATA = plugins.DataFactory("fits.data")
+ArrayData = plugins.DataFactory("core.array")
+
 hdu = load_star_image()  # FITS test image
 img_array = hdu.data  # narray image
 
+array = ArrayData()
+array.set_array("example", np.array([3]))
+
 # builder initialize
-workflow = plugins.WorkflowFactory("images.reduction")
+workflow = plugins.WorkflowFactory("aperture.photometry")
 builder = workflow.get_builder()
-builder.directory_input = orm.Str("/home/jovyan/files")
-builder.directory_output = orm.Str("/home/jovyan/calibrated")
-# builder.image = orm.Str('image/path')
-builder.combination_params = orm.Dict({"unit": "adu"})
-builder.aggregate_method = orm.Str("average")
+builder.fits_image = FITSDATA("/home/jovyan/calibrated/combined_bias.fit")
+builder.bck = array
 builder.positions = orm.List([(10, 10)])
 builder.radii = orm.List([3])
 

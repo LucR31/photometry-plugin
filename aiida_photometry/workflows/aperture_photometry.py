@@ -3,20 +3,26 @@ from aiida.engine import calcfunction
 from aiida import orm, engine, plugins
 
 from photutils.aperture import CircularAperture, aperture_photometry
+from astropy.stats import sigma_clipped_stats
 
 FITSDATA = plugins.DataFactory("fits.data")
 ArrayData = plugins.DataFactory("core.array")
 
 
 @calcfunction
-def circular_aperture_photometry(
-    data,
-    # positions,
-    # radius
-):
+def back_detection(data):
+    mean, median, std = sigma_clipped_stats(data, sigma=3.0)
+    # print(np.array((mean, median, std)))
+    pass
 
-    aperture = [CircularAperture([(10, 10)], r=i) for i in [3, 4]]
-    qtable = aperture_photometry(data, aperture)
+
+@calcfunction
+def circular_aperture_photometry(data, positions, radius):
+    aperture = [
+        CircularAperture(positions.attributes["list"], r=i)
+        for i in radius.attributes["list"]
+    ]
+    qtable = aperture_photometry(data.get_array("substracted"), aperture)
     array = ArrayData()
     array.set_array("as_array", qtable.as_array())
     return array
@@ -25,7 +31,7 @@ def circular_aperture_photometry(
 @calcfunction
 def substract_bck(img, bck):
     array = ArrayData()
-    array.set_array("substracted", img.data_to_plot() - bck)
+    array.set_array("substracted", img.data_to_plot() - bck.get_array("example"))
     return array
 
 
@@ -47,8 +53,8 @@ class AperturePhotometry(engine.WorkChain):
     def aperture_photometry(self):
         self.ctx.result = circular_aperture_photometry(
             self.ctx.img_wo_bck,
-            # self.inputs.positions,
-            # self.inputs.radii,
+            self.inputs.positions,
+            self.inputs.radii,
         )
 
     def result_cal(self):

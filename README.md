@@ -9,6 +9,7 @@ Data:
 
 Workflows:
 - `images.reduction`: Workflow for data reduction
+- `aperture.photometry`:
 
 
 ### Contact
