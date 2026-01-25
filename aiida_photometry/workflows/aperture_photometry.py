@@ -3,6 +3,8 @@ from aiida.engine import calcfunction
 from aiida import orm, engine, plugins
 
 from photutils.aperture import CircularAperture, aperture_photometry
+from photutils.centroids import (centroid_1dg, centroid_2dg,
+                                 centroid_com, centroid_quadratic)
 from astropy.stats import sigma_clipped_stats
 
 FITSDATA = plugins.DataFactory("fits.data")
