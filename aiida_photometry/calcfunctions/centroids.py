@@ -6,6 +6,7 @@ from photutils.centroids import (
     centroid_quadratic,
     centroid_1dg,
     centroid_2dg,
+    centroid_sources
 )
 
 
@@ -92,3 +93,47 @@ def centroid_2dg_cf(
     x, y = centroid_2dg(image, **kwargs)
 
     return _centroid_to_dict(x, y)
+
+@calcfunction
+def centroid_sources_cf(
+    data: ArrayData,
+    positions: ArrayData,
+    options: Dict,
+):
+    """
+    Wrapper around photutils.centroids.centroid_sources
+
+    positions:
+        ArrayData with arrays:
+          - 'x'
+          - 'y'
+
+    options:
+        Passed as **kwargs:
+          - box_size
+          - footprint
+          - error
+          - mask
+          - centroid_func
+    """
+    image = data.get_array('image')
+
+    xpos = positions.get_array('x')
+    ypos = positions.get_array('y')
+
+    kwargs = options.get_dict()
+
+    xcen, ycen = centroid_sources(
+        image,
+        xpos,
+        ypos,
+        **kwargs
+    )
+
+    result = Dict(dict={
+        "x": xcen.tolist(),
+        "y": ycen.tolist(),
+    })
+
+    return result
+
