@@ -31,3 +31,5 @@ dependencies = [
 [project.entry-points."aiida.workflows"]
 "images.reduction" = "aiida_photometry.workflows.data_reduction:DataReduction"
 "aperture.photometry" = "aiida_photometry.workflows.aperture_photometry:AperturePhotometryWorkChain"
+"centroid.detection" = "aiida_photometry.workflows.centroids_detection:SourceDetectionWorkChain"
+"photometry.pipeline" = "aiida_photometry.workflows.photo_pipeline:PhotometryPipelineWorkChain"

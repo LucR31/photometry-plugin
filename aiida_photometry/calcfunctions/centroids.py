@@ -1,5 +1,7 @@
 from aiida.engine import calcfunction
 from aiida.orm import Dict, ArrayData
+import numpy as np
+from photutils import DAOStarFinder
 
 from photutils.centroids import (
     centroid_com,
@@ -96,44 +98,51 @@ def centroid_2dg_cf(
 
 @calcfunction
 def centroid_sources_cf(
-    data: ArrayData,
+    image: ArrayData,
     positions: ArrayData,
-    options: Dict,
-):
+    options: Dict
+) -> ArrayData:
     """
-    Wrapper around photutils.centroids.centroid_sources
-
-    positions:
-        ArrayData with arrays:
-          - 'x'
-          - 'y'
-
-    options:
-        Passed as **kwargs:
-          - box_size
-          - footprint
-          - error
-          - mask
-          - centroid_func
+    Refine given source positions using centroid_sources.
     """
-    image = data.get_array('image')
-
-    xpos = positions.get_array('x')
-    ypos = positions.get_array('y')
-
+    img_array = image.get_array("image")
+    xpos = np.array(positions.get_array("x"), dtype=float)
+    ypos = np.array(positions.get_array("y"), dtype=float)
     kwargs = options.get_dict()
 
-    xcen, ycen = centroid_sources(
-        image,
-        xpos,
-        ypos,
-        **kwargs
-    )
+    xcen, ycen = centroid_sources(img_array, xpos, ypos, **kwargs)
 
-    result = Dict(dict={
-        "x": xcen.tolist(),
-        "y": ycen.tolist(),
-    })
-
+    result = ArrayData()
+    result.set_array("x", np.array(xcen, dtype=float))
+    result.set_array("y", np.array(ycen, dtype=float))
     return result
 
+@calcfunction
+def detect_sources_cf(image: ArrayData, options: Dict) -> ArrayData:
+    """
+    Detect sources in an image using DAOStarFinder.
+
+    Returns ArrayData with 'x' and 'y'.
+    """
+    img_array = image.get_array("image")
+    kwargs = options.get_dict()
+
+    threshold = kwargs.get("threshold", 3.0)
+    fwhm = kwargs.get("fwhm", 3.0)
+    daofinder = DAOStarFinder(threshold=threshold, fwhm=fwhm)
+
+    sources_table = daofinder(img_array)
+
+    if sources_table is None or len(sources_table) == 0:
+        xpos = np.array([], dtype=float)
+        ypos = np.array([], dtype=float)
+    else:
+        xpos = getattr(sources_table["xcentroid"], "value", sources_table["xcentroid"])
+        ypos = getattr(sources_table["ycentroid"], "value", sources_table["ycentroid"])
+        xpos = np.array(xpos, dtype=float)
+        ypos = np.array(ypos, dtype=float)
+
+    result = ArrayData()
+    result.set_array("x", xpos)
+    result.set_array("y", ypos)
+    return result
