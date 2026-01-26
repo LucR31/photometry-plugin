@@ -30,4 +30,4 @@ dependencies = [
 
 [project.entry-points."aiida.workflows"]
 "images.reduction" = "aiida_photometry.workflows.data_reduction:DataReduction"
-"aperture.photometry" = "aiida_photometry.workflows.aperture_photometry:AperturePhotometry"
+"aperture.photometry" = "aiida_photometry.workflows.aperture_photometry:AperturePhotometryWorkChain"

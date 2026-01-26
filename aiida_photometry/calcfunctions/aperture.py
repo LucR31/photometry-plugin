@@ -10,9 +10,21 @@ from photutils.aperture import (
 )
 
 def _table_to_dict(table):
+    data = {}
+    units = {}
+
+    for name in table.colnames:
+        col = table[name]
+
+        if hasattr(col, "unit"):
+            data[name] = col.value.tolist()
+            units[name] = str(col.unit)
+        else:
+            data[name] = col.tolist()
+
     return Dict(dict={
-        name: table[name].tolist()
-        for name in table.colnames
+        "data": data,
+        "units": units,
     })
 
 
