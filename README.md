@@ -10,6 +10,8 @@ Data:
 Workflows:
 - `images.reduction`: Workflow for data reduction
 - `aperture.photometry`:
+- `centroid.detection` :
+- `photometry.pipeline` : 
 
 
 ### Contact
