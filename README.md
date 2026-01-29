@@ -13,6 +13,10 @@ Workflows:
 - `centroid.detection` :
 - `photometry.pipeline` : 
 
+### Workflow example:
+
+![Diagram](provenance_graphs/provenance.png)
+
 
 ### Contact
 
