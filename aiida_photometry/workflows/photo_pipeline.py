@@ -11,18 +11,11 @@ AperturePhotometryWC = WorkflowFactory("aperture.photometry")
 class PhotometryPipelineWorkChain(WorkChain):
     """
     End-to-end photometry pipeline:
-      1. Detect sources
-      2. Refine centroids
-      3. Perform aperture photometry
     """
 
     @classmethod
     def define(cls, spec):
         super().define(spec)
-
-        # ------------------------------------------------------------------
-        # Expose child workflow inputs
-        # ------------------------------------------------------------------
 
         spec.expose_inputs(
             SourceDetectionWC,
@@ -36,26 +29,18 @@ class PhotometryPipelineWorkChain(WorkChain):
             exclude=("image", "positions"),
         )
 
-        # ------------------------------------------------------------------
-        # Shared / top-level inputs
-        # ------------------------------------------------------------------
-
         spec.input(
             "image",
             valid_type=orm.ArrayData,
-            help="Science image (2D array named 'image')"
+            help="Science image (2D array named 'image')",
         )
 
         spec.input(
             "background",
             valid_type=orm.ArrayData,
             required=False,
-            help="Optional background image"
+            help="Optional background image",
         )
-
-        # ------------------------------------------------------------------
-        # Outputs
-        # ------------------------------------------------------------------
 
         spec.expose_outputs(
             SourceDetectionWC,
@@ -67,26 +52,15 @@ class PhotometryPipelineWorkChain(WorkChain):
             namespace="aperture",
         )
 
-        # ------------------------------------------------------------------
-        # Workflow outline
-        # ------------------------------------------------------------------
-
         spec.outline(
             cls.run_source_detection,
             cls.run_aperture_photometry,
             cls.finalize,
         )
 
-    # ----------------------------------------------------------------------
-    # Steps
-    # ----------------------------------------------------------------------
-
     def run_source_detection(self):
         """Run the source detection workflow."""
-        inputs = self.exposed_inputs(
-            SourceDetectionWC,
-            namespace="detection"
-        )
+        inputs = self.exposed_inputs(SourceDetectionWC, namespace="detection")
 
         inputs["image"] = self.inputs.image
 
@@ -98,10 +72,7 @@ class PhotometryPipelineWorkChain(WorkChain):
 
     def run_aperture_photometry(self):
         """Run aperture photometry using detected source positions."""
-        inputs = self.exposed_inputs(
-            AperturePhotometryWC,
-            namespace="aperture"
-        )
+        inputs = self.exposed_inputs(AperturePhotometryWC, namespace="aperture")
 
         inputs["image"] = self.inputs.image
         inputs["positions"] = self.ctx.source_detection.outputs.sources
@@ -111,9 +82,9 @@ class PhotometryPipelineWorkChain(WorkChain):
 
     def finalize(self):
         self.out_many(
-        self.exposed_outputs(
-            self.ctx.photometry,
-            AperturePhotometryWC,
-            namespace="aperture",
+            self.exposed_outputs(
+                self.ctx.photometry,
+                AperturePhotometryWC,
+                namespace="aperture",
+            )
         )
-    )

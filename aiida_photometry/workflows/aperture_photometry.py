@@ -8,10 +8,6 @@ from aiida_photometry.calcfunctions import (
     elliptical_annulus_photometry_cf,
 )
 
-# -----------------------------------------------------------------------------
-# Dispatch table: user-facing method -> calcfunction
-# -----------------------------------------------------------------------------
-
 APERTURE_DISPATCH = {
     "circular": circular_aperture_photometry_cf,
     "circular_annulus": circular_annulus_photometry_cf,
@@ -22,18 +18,8 @@ APERTURE_DISPATCH = {
 
 class AperturePhotometryWorkChain(WorkChain):
     """
-    Production-grade aperture photometry workflow.
-
-    Supports:
-      - circular
-      - circular annulus
-      - elliptical
-      - elliptical annulus
+    Aperture photometry workflow.
     """
-
-    # -------------------------------------------------------------------------
-    # Definition
-    # -------------------------------------------------------------------------
 
     @classmethod
     def define(cls, spec):
@@ -97,13 +83,11 @@ class AperturePhotometryWorkChain(WorkChain):
 
         # --- Exit codes ---
         spec.exit_code(300, "ERROR_INVALID_IMAGE", "Input image must be 2D")
-        spec.exit_code(301, "ERROR_INVALID_POSITIONS", "Positions must contain 'x' and 'y'")
+        spec.exit_code(
+            301, "ERROR_INVALID_POSITIONS", "Positions must contain 'x' and 'y'"
+        )
         spec.exit_code(302, "ERROR_INVALID_APERTURE", "Invalid aperture parameters")
         spec.exit_code(310, "ERROR_UNKNOWN_METHOD", "Unknown photometry method")
-
-    # -------------------------------------------------------------------------
-    # Steps
-    # -------------------------------------------------------------------------
 
     def validate_inputs(self):
         # Validate image
@@ -152,4 +136,3 @@ class AperturePhotometryWorkChain(WorkChain):
 
     def finalize(self):
         self.out("photometry", self.ctx.photometry)
-

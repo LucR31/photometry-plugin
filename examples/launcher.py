@@ -1,22 +1,40 @@
-# -*- coding: utf-8 -*-
-from aiida import orm, plugins, engine
-from photutils.datasets import load_star_image
 import numpy as np
+import os
 from astropy.io import fits
+from aiida import orm
+from aiida.plugins import WorkflowFactory, DataFactory
+from aiida.engine import run
 
-hdu = load_star_image()  # FITS test image
-img_array = hdu.data  # narray image
+FitsData = DataFactory("fits.data")
 
-# builder initialize
-workflow = plugins.WorkflowFactory("images.reduction")
-builder = workflow.get_builder()
-builder.directory_input = orm.Str("/home/jovyan/files")
-builder.directory_output = orm.Str("/home/jovyan/calibrated")
-# builder.image = orm.Str('image/path')
-builder.combination_params = orm.Dict({"unit": "adu"})
-builder.aggregate_method = orm.Str("average")
-builder.positions = orm.List([(10, 10)])
-builder.radii = orm.List([3])
+bias_dir = "/home/jovyan/work/data/calibration_images/2026-02-27_14_24_Bias"
+bias_nodes = {}
+for i, filename in enumerate(sorted(os.listdir(bias_dir))):
+    if filename.endswith(".fit"):
+        path = os.path.abspath(os.path.join(bias_dir, filename))
+        node = FitsData(file=path).store()
+        bias_nodes[f"bias_{i}"] = node
 
-# run
-engine.run(builder)
+
+def create_synthetic_fits(path, value, shape=(50, 50)):
+    """Create a FITS file with constant pixel values."""
+    data = np.full(shape, value, dtype=np.float32)
+    hdu = fits.PrimaryHDU(data)
+    hdu.header["BUNIT"] = "adu"
+    hdu.header["EXPTIME"] = 60.0
+    hdu.header["FILTER"] = "R"
+    hdu.writeto(path, overwrite=True)
+    return path
+
+
+# Synthetic science frame
+science_path = create_synthetic_fits("science.fits", value=1100)
+science_node = FitsData(file=os.path.abspath(science_path)).store()
+
+# BUILDER
+WorkflowClass = WorkflowFactory("images.reduction")
+builder = WorkflowClass.get_builder()
+builder.bias_frames = bias_nodes
+builder.raw_science = science_node
+builder.parameters = orm.Dict({"unit": "adu"})
+result = run(builder)

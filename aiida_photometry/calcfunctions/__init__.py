@@ -14,6 +14,11 @@ from .aperture import (
     elliptical_annulus_photometry_cf,
 )
 
+from .calibration import (
+    create_master_bias,
+    calibrate_science
+)
+
 __all__ = [
     #centroids
     "centroid_com_cf",
@@ -28,5 +33,10 @@ __all__ = [
     "circular_annulus_photometry_cf",
     "elliptical_aperture_photometry_cf",
     "elliptical_annulus_photometry_cf",
+
+    #calibration
+    "create_master_bias",
+    "calibrate_science"
+
 ]
 

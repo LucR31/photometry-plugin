@@ -3,6 +3,7 @@ from aiida import orm
 from aiida.orm import ArrayData, Dict
 from aiida_photometry.calcfunctions import centroid_sources_cf, detect_sources_cf
 
+
 class SourceDetectionWorkChain(WorkChain):
     """
     Detect sources in an image using a two-step process:
@@ -16,38 +17,32 @@ class SourceDetectionWorkChain(WorkChain):
 
         # --- Inputs ---
         spec.input(
-            "image",
-            valid_type=ArrayData,
-            help="Science image (2D array named 'image')"
+            "image", valid_type=ArrayData, help="Science image (2D array named 'image')"
         )
 
         spec.input(
             "background",
             valid_type=ArrayData,
             required=False,
-            help="Optional background image to subtract"
+            help="Optional background image to subtract",
         )
 
         spec.input(
             "detection_params",
             valid_type=Dict,
             default=lambda: Dict(dict={"threshold": 3.0, "fwhm": 3.0}),
-            help="Parameters for source detection (DAOStarFinder)"
+            help="Parameters for source detection (DAOStarFinder)",
         )
 
         spec.input(
             "refine_params",
             valid_type=Dict,
             default=lambda: Dict(dict={}),
-            help="Parameters for centroid_sources refinement"
+            help="Parameters for centroid_sources refinement",
         )
 
         # --- Outputs ---
-        spec.output(
-            "sources",
-            valid_type=ArrayData,
-            help="Refined source positions"
-        )
+        spec.output("sources", valid_type=ArrayData, help="Refined source positions")
 
         # --- Outline ---
         spec.outline(
@@ -60,10 +55,6 @@ class SourceDetectionWorkChain(WorkChain):
         # Exit codes
         spec.exit_code(300, "ERROR_INVALID_IMAGE", "Input image must be 2D")
         spec.exit_code(301, "ERROR_NO_SOURCES", "No sources were detected")
-
-    # -------------------------------------------------------------------------
-    # Steps
-    # -------------------------------------------------------------------------
 
     def prepare_image(self):
         """Subtract background if provided and store in context."""
@@ -82,8 +73,7 @@ class SourceDetectionWorkChain(WorkChain):
     def detect_sources(self):
         """Run DAOStarFinder calcfunction to detect sources."""
         self.ctx.positions = detect_sources_cf(
-            image=self.ctx.image,
-            options=self.inputs.detection_params
+            image=self.ctx.image, options=self.inputs.detection_params
         )
 
         # Check if sources were found
@@ -97,7 +87,7 @@ class SourceDetectionWorkChain(WorkChain):
         self.ctx.refined_positions = centroid_sources_cf(
             image=self.ctx.image,
             positions=self.ctx.positions,
-            options=self.inputs.refine_params
+            options=self.inputs.refine_params,
         )
 
     def finalize(self):

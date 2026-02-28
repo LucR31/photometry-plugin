@@ -1,68 +1,39 @@
-# -*- coding: utf-8 -*-
-from aiida.engine import calcfunction
-from aiida import orm, engine, plugins
+from aiida.engine import WorkChain
+from aiida.plugins import DataFactory
+from aiida.orm import List, Dict
+from aiida_photometry.calcfunctions import create_master_bias, calibrate_science
 
-from aiida_photometry.utils import get_image_by_type
-
-from astropy.nddata import CCDData
-import ccdproc
+FitsData = DataFactory("fits.data")
 
 
-FITSDATA = plugins.DataFactory("fits.data")
+class SimpleCalibrationWorkChain(WorkChain):
 
-
-@calcfunction
-def sub_overscan(path_collection: orm.Str, image_type: str):
-    images = get_image_by_type(path_collection.value, image_type)
-    first_bias = CCDData.read(images[0], unit="adu")
-    result_substraction = ccdproc.subtract_overscan(
-        first_bias, overscan=first_bias[:, 2055:], median=True
-    )
-    return FITSDATA(result_substraction)
-
-
-@calcfunction
-def trim_image(image_to_trim):
-    trimmed_image = ccdproc.trim_image(image_to_trim[:, :2048])
-    return FITSDATA(trimmed_image)
-
-
-@calcfunction
-def make_bias_master(
-    path_collection: orm.Str,
-    calibrated_path: orm.Str,
-    comb_method: orm.Str,
-    comb_params_dict: orm.Dict,
-):
-    """
-    Returns a FITS file with the combined bias
-    """
-    biases_im = get_image_by_type(path_collection.value, "Bias Frame")
-    combined_bias = ccdproc.combine(biases_im, method=comb_method, **comb_params_dict)
-    combined_bias.meta["combined"] = True
-    combined_bias.write(calibrated_path.value + "/combined_bias.fit", overwrite=True)
-    return FITSDATA(calibrated_path.value + "/combined_bias.fit")
-
-
-class DataReduction(engine.WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input("directory_input", valid_type=orm.Str)
-        spec.input("directory_output", valid_type=orm.Str)
-        spec.input("aggregate_method", valid_type=orm.Str, help="")
-        spec.input("combination_params", valid_type=orm.Dict, help="")
-
-        spec.outputs.dynamic = True
-        spec.outline(cls.agg_bias, cls.result_cal)
-
-    def agg_bias(self):
-        self.ctx.bias = make_bias_master(
-            self.inputs.directory_input,
-            self.inputs.directory_output,
-            self.inputs.aggregate_method,
-            self.inputs.combination_params,
+        spec.input("raw_science", valid_type=FitsData)
+        spec.input_namespace("bias_frames", valid_type=FitsData, dynamic=True)
+        spec.input("parameters", valid_type=Dict)
+        spec.outline(
+            cls.create_master_bias_step,
+            # cls.calibrate_science_step
         )
+        spec.output("master_bias", valid_type=FitsData)
+        spec.output("calibrated_science", valid_type=FitsData)
 
-    def result_cal(self):
-        self.out("result", self.ctx.result)
+    def create_master_bias_step(self):
+        bias_nodes = self.inputs.bias_frames
+        master = create_master_bias(**bias_nodes, parameters=self.inputs.parameters)
+        self.ctx.master_bias = master
+        self.out("master_bias", master)
+
+    def calibrate_science_step(self):
+        calibrated = calibrate_science(
+            self.inputs.raw_science,
+            self.ctx.master_bias,
+            None,  # master dark, omitted for test
+            None,  # master flat, omitted for test
+            self.inputs.parameters,
+        )
+        self.ctx.calibrated_science = calibrated
+        self.out("calibrated_science", calibrated)
