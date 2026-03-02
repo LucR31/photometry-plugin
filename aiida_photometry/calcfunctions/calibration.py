@@ -1,6 +1,5 @@
 from aiida.engine import calcfunction
 from aiida.orm import Dict, List
-from aiida.plugins import DataFactory
 
 from astropy.nddata import CCDData
 import ccdproc

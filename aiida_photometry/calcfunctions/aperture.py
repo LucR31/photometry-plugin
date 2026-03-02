@@ -9,6 +9,9 @@ from photutils.aperture import (
     aperture_photometry,
 )
 
+from aiida_photometry.data.fits_data import FitsData
+
+
 def _table_to_dict(table):
     data = {}
     units = {}
@@ -22,15 +25,17 @@ def _table_to_dict(table):
         else:
             data[name] = col.tolist()
 
-    return Dict(dict={
-        "data": data,
-        "units": units,
-    })
+    return Dict(
+        dict={
+            "data": data,
+            "units": units,
+        }
+    )
 
 
 @calcfunction
 def circular_aperture_photometry_cf(
-    data: ArrayData,
+    image: FitsData,
     positions: ArrayData,
     radius: Dict,
     options: Dict,
@@ -47,26 +52,23 @@ def circular_aperture_photometry_cf(
     options:
         Passed to aperture_photometry (**kwargs)
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
+
     x = positions.get_array("x")
     y = positions.get_array("y")
-
     r = radius.get_dict()["r"]
 
     apertures = CircularAperture(list(zip(x, y)), r=r)
 
-    table = aperture_photometry(
-        image,
-        apertures,
-        **options.get_dict()
-    )
+    table = aperture_photometry(data, apertures, **options.get_dict())
 
     return _table_to_dict(table)
 
 
 @calcfunction
 def circular_annulus_photometry_cf(
-    data: ArrayData,
+    image: FitsData,
     positions: ArrayData,
     radii: Dict,
     options: Dict,
@@ -77,10 +79,10 @@ def circular_annulus_photometry_cf(
     radii:
         Dict with keys 'r_in', 'r_out'
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
     x = positions.get_array("x")
     y = positions.get_array("y")
-
     r_in = radii.get_dict()["r_in"]
     r_out = radii.get_dict()["r_out"]
 
@@ -90,17 +92,14 @@ def circular_annulus_photometry_cf(
         r_out=r_out,
     )
 
-    table = aperture_photometry(
-        image,
-        apertures,
-        **options.get_dict()
-    )
+    table = aperture_photometry(data, apertures, **options.get_dict())
 
     return _table_to_dict(table)
 
+
 @calcfunction
 def elliptical_aperture_photometry_cf(
-    data: ArrayData,
+    image: FitsData,
     positions: ArrayData,
     geometry: Dict,
     options: Dict,
@@ -114,10 +113,10 @@ def elliptical_aperture_photometry_cf(
           - b
           - theta
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
     x = positions.get_array("x")
     y = positions.get_array("y")
-
     g = geometry.get_dict()
 
     apertures = EllipticalAperture(
@@ -127,17 +126,14 @@ def elliptical_aperture_photometry_cf(
         theta=g["theta"],
     )
 
-    table = aperture_photometry(
-        image,
-        apertures,
-        **options.get_dict()
-    )
+    table = aperture_photometry(data, apertures, **options.get_dict())
 
     return _table_to_dict(table)
 
+
 @calcfunction
 def elliptical_annulus_photometry_cf(
-    data: ArrayData,
+    image: FitsData,
     positions: ArrayData,
     geometry: Dict,
     options: Dict,
@@ -153,10 +149,10 @@ def elliptical_annulus_photometry_cf(
           - b_out
           - theta
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
     x = positions.get_array("x")
     y = positions.get_array("y")
-
     g = geometry.get_dict()
 
     apertures = EllipticalAnnulus(
@@ -168,10 +164,6 @@ def elliptical_annulus_photometry_cf(
         theta=g["theta"],
     )
 
-    table = aperture_photometry(
-        image,
-        apertures,
-        **options.get_dict()
-    )
+    table = aperture_photometry(data, apertures, **options.get_dict())
 
     return _table_to_dict(table)

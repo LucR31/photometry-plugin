@@ -13,6 +13,8 @@ class SimpleCalibrationWorkChain(WorkChain):
         super().define(spec)
         spec.input("raw_science", valid_type=FitsData)
         spec.input_namespace("bias_frames", valid_type=FitsData, dynamic=True)
+        spec.input_namespace("dark_frames", valid_type=FitsData, dynamic=True, required=False)
+        spec.input_namespace("flat_frames", valid_type=FitsData, dynamic=True, required=False)
         spec.input("parameters", valid_type=Dict)
         spec.outline(
             cls.create_master_bias_step,

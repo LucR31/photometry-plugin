@@ -64,3 +64,11 @@ class FitsData(SinglefileData):
             # fallback if no BUNIT present
             with self.open(mode="rb") as handle:
                 return CCDData.read(handle, hdu=hdu_index, unit=u.Unit(default_unit))
+
+    def get_array(self, hdu_index=0):
+        """
+        Return raw numpy array from FITS file.
+        """
+        with self.open(mode="rb") as f:
+            with fits.open(f) as hdul:
+                return hdul[hdu_index].data.copy()

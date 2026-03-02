@@ -1,5 +1,6 @@
 from aiida.engine import WorkChain
 from aiida import orm
+from aiida.plugins import DataFactory
 
 from aiida_photometry.calcfunctions import (
     circular_aperture_photometry_cf,
@@ -14,6 +15,7 @@ APERTURE_DISPATCH = {
     "elliptical": elliptical_aperture_photometry_cf,
     "elliptical_annulus": elliptical_annulus_photometry_cf,
 }
+FitsData = DataFactory("fits.data")
 
 
 class AperturePhotometryWorkChain(WorkChain):
@@ -28,8 +30,8 @@ class AperturePhotometryWorkChain(WorkChain):
         # --- Inputs ---
         spec.input(
             "image",
-            valid_type=orm.ArrayData,
-            help="Science image with array named 'image'",
+            valid_type=FitsData,
+            help="Science image in FITS format",
         )
 
         spec.input(
@@ -90,11 +92,7 @@ class AperturePhotometryWorkChain(WorkChain):
         spec.exit_code(310, "ERROR_UNKNOWN_METHOD", "Unknown photometry method")
 
     def validate_inputs(self):
-        # Validate image
-        image = self.inputs.image.get_array("image")
-        if image.ndim != 2:
-            return self.exit_codes.ERROR_INVALID_IMAGE
-
+        # Validate image TODO
         # Validate positions
         positions = self.inputs.positions
         for key in ("x", "y"):
@@ -112,16 +110,17 @@ class AperturePhotometryWorkChain(WorkChain):
             return self.exit_codes.ERROR_INVALID_APERTURE
 
     def prepare_image(self):
-        image = self.inputs.image.get_array("image")
+        # TODO
+        image = self.inputs.image
 
         if "background" in self.inputs:
             background = self.inputs.background.get_array("image")
             image = image - background
 
-        img = orm.ArrayData()
-        img.set_array("image", image)
+        # img = orm.ArrayData()
+        # img.set_array("image", image)
 
-        self.ctx.image = img
+        self.ctx.image = image
 
     def run_photometry(self):
         method = self.inputs.method.value
