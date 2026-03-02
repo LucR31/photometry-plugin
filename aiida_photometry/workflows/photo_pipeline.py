@@ -1,8 +1,8 @@
 from aiida.engine import WorkChain, submit
 from aiida import orm
-from aiida.plugins import WorkflowFactory
+from aiida.plugins import WorkflowFactory,DataFactory
 
-
+FitsData = DataFactory("fits.data")
 # Load child workflows via entry points
 SourceDetectionWC = WorkflowFactory("centroid.detection")
 AperturePhotometryWC = WorkflowFactory("aperture.photometry")
@@ -31,7 +31,7 @@ class PhotometryPipelineWorkChain(WorkChain):
 
         spec.input(
             "image",
-            valid_type=orm.ArrayData,
+            valid_type=FitsData,
             help="Science image (2D array named 'image')",
         )
 

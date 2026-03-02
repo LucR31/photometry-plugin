@@ -8,8 +8,10 @@ from photutils.centroids import (
     centroid_quadratic,
     centroid_1dg,
     centroid_2dg,
-    centroid_sources
+    centroid_sources,
 )
+
+from aiida_photometry.data.fits_data import FitsData
 
 
 def _centroid_to_dict(x, y):
@@ -23,7 +25,7 @@ def _centroid_to_dict(x, y):
 
 @calcfunction
 def centroid_com_cf(
-    data: ArrayData,
+    image: FitsData,
     options: Dict,
 ):
     """
@@ -32,17 +34,18 @@ def centroid_com_cf(
     options:
         Passed directly as **kwargs (e.g. mask)
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
     kwargs = options.get_dict()
 
-    x, y = centroid_com(image, **kwargs)
+    x, y = centroid_com(data, **kwargs)
 
     return _centroid_to_dict(x, y)
 
 
 @calcfunction
 def centroid_quadratic_cf(
-    data: ArrayData,
+    image: FitsData,
     options: Dict,
 ):
     """
@@ -51,17 +54,18 @@ def centroid_quadratic_cf(
     options:
         Passed directly as **kwargs (e.g. xpeak, ypeak, fit_boxsize)
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
     kwargs = options.get_dict()
 
-    x, y = centroid_quadratic(image, **kwargs)
+    x, y = centroid_quadratic(data, **kwargs)
 
     return _centroid_to_dict(x, y)
 
 
 @calcfunction
 def centroid_1dg_cf(
-    data: ArrayData,
+    image: FitsData,
     options: Dict,
 ):
     """
@@ -70,17 +74,18 @@ def centroid_1dg_cf(
     options:
         Passed directly as **kwargs (e.g. error, mask)
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
     kwargs = options.get_dict()
 
-    x, y = centroid_1dg(image, **kwargs)
+    x, y = centroid_1dg(data, **kwargs)
 
     return _centroid_to_dict(x, y)
 
 
 @calcfunction
 def centroid_2dg_cf(
-    data: ArrayData,
+    image: FitsData,
     options: Dict,
 ):
     """
@@ -89,23 +94,24 @@ def centroid_2dg_cf(
     options:
         Passed directly as **kwargs (e.g. error, mask)
     """
-    image = data.get_array("image")
+    ccd = image.get_ccddata()
+    data = ccd.data
     kwargs = options.get_dict()
 
-    x, y = centroid_2dg(image, **kwargs)
+    x, y = centroid_2dg(data, **kwargs)
 
     return _centroid_to_dict(x, y)
 
+
 @calcfunction
 def centroid_sources_cf(
-    image: ArrayData,
-    positions: ArrayData,
-    options: Dict
+    image: FitsData, positions: ArrayData, options: Dict
 ) -> ArrayData:
     """
     Refine given source positions using centroid_sources.
     """
-    img_array = image.get_array("image")
+    ccd = image.get_ccddata()
+    img_array = ccd.data
     xpos = np.array(positions.get_array("x"), dtype=float)
     ypos = np.array(positions.get_array("y"), dtype=float)
     kwargs = options.get_dict()
@@ -117,14 +123,16 @@ def centroid_sources_cf(
     result.set_array("y", np.array(ycen, dtype=float))
     return result
 
+
 @calcfunction
-def detect_sources_cf(image: ArrayData, options: Dict) -> ArrayData:
+def detect_sources_cf(image: FitsData, options: Dict) -> ArrayData:
     """
     Detect sources in an image using DAOStarFinder.
 
     Returns ArrayData with 'x' and 'y'.
     """
-    img_array = image.get_array("image")
+    ccd = image.get_ccddata()
+    img_array = ccd.data
     kwargs = options.get_dict()
 
     threshold = kwargs.get("threshold", 3.0)
@@ -145,4 +153,5 @@ def detect_sources_cf(image: ArrayData, options: Dict) -> ArrayData:
     result = ArrayData()
     result.set_array("x", xpos)
     result.set_array("y", ypos)
+
     return result

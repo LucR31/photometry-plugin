@@ -1,7 +1,10 @@
 from aiida.engine import WorkChain
 from aiida import orm
 from aiida.orm import ArrayData, Dict
+from aiida.plugins import DataFactory
 from aiida_photometry.calcfunctions import centroid_sources_cf, detect_sources_cf
+
+FitsData = DataFactory("fits.data")
 
 
 class SourceDetectionWorkChain(WorkChain):
@@ -17,7 +20,7 @@ class SourceDetectionWorkChain(WorkChain):
 
         # --- Inputs ---
         spec.input(
-            "image", valid_type=ArrayData, help="Science image (2D array named 'image')"
+            "image", valid_type=FitsData, help="Science image (2D array named 'image')"
         )
 
         spec.input(
@@ -58,17 +61,13 @@ class SourceDetectionWorkChain(WorkChain):
 
     def prepare_image(self):
         """Subtract background if provided and store in context."""
-        image = self.inputs.image.get_array("image")
-        if image.ndim != 2:
-            return self.exit_codes.ERROR_INVALID_IMAGE
+        image = self.inputs.image
 
         if "background" in self.inputs:
             bck = self.inputs.background.get_array("image")
             image = image - bck
 
-        img = ArrayData()
-        img.set_array("image", image)
-        self.ctx.image = img
+        self.ctx.image = image
 
     def detect_sources(self):
         """Run DAOStarFinder calcfunction to detect sources."""
