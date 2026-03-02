@@ -5,10 +5,10 @@ The plugin relies heavily on [astropy](https://www.astropy.org/), specially [ccd
 
 ### Plugins
 Data:
-- `fits.data`: FITS data plugin
+- `fits.data`: Defines FitsData as a SingleFile data type. Main methods:. 
 
 Workflows:
-- `images.reduction`: Workflow for data reduction
+- `images.reduction`: 
 - `aperture.photometry`:
 - `centroid.detection` :
 - `photometry.pipeline` : 
