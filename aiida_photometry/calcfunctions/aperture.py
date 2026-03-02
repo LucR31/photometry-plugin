@@ -7,6 +7,8 @@ from photutils.aperture import (
     EllipticalAperture,
     EllipticalAnnulus,
     aperture_photometry,
+    RectangularAperture,
+    RectangularAnnulus
 )
 
 from aiida_photometry.data.fits_data import FitsData
@@ -162,6 +164,78 @@ def elliptical_annulus_photometry_cf(
         b_in=g["b_in"],
         b_out=g["b_out"],
         theta=g["theta"],
+    )
+
+    table = aperture_photometry(data, apertures, **options.get_dict())
+
+    return _table_to_dict(table)
+
+@calcfunction
+def rectangular_aperture_photometry_cf(
+    image: FitsData,
+    positions: ArrayData,
+    geometry: Dict,
+    options: Dict,
+):
+    """
+    Rectangular aperture photometry.
+
+    geometry:
+        Dict with keys:
+          - w      (width)
+          - h      (height)
+          - theta  (rotation angle in radians)
+    """
+
+    ccd = image.get_ccddata()
+    data = ccd.data
+    x = positions.get_array("x")
+    y = positions.get_array("y")
+    g = geometry.get_dict()
+
+    apertures = RectangularAperture(
+        list(zip(x, y)),
+        w=g["w"],
+        h=g["h"],
+        theta=g.get("theta", 0.0),
+    )
+
+    table = aperture_photometry(data, apertures, **options.get_dict())
+
+    return _table_to_dict(table)
+
+@calcfunction
+def rectangular_annulus_photometry_cf(
+    image: FitsData,
+    positions: ArrayData,
+    geometry: Dict,
+    options: Dict,
+):
+    """
+    Rectangular annulus photometry.
+
+    geometry:
+        Dict with keys:
+          - w_in
+          - w_out
+          - h_in
+          - h_out
+          - theta
+    """
+
+    ccd = image.get_ccddata()
+    data = ccd.data
+    x = positions.get_array("x")
+    y = positions.get_array("y")
+    g = geometry.get_dict()
+
+    apertures = RectangularAnnulus(
+        list(zip(x, y)),
+        w_in=g["w_in"],
+        w_out=g["w_out"],
+        h_in=g["h_in"],
+        h_out=g["h_out"],
+        theta=g.get("theta", 0.0),
     )
 
     table = aperture_photometry(data, apertures, **options.get_dict())

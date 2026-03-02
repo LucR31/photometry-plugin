@@ -7,6 +7,8 @@ from aiida_photometry.calcfunctions import (
     circular_annulus_photometry_cf,
     elliptical_aperture_photometry_cf,
     elliptical_annulus_photometry_cf,
+    rectangular_aperture_photometry_cf,
+    rectangular_annulus_photometry_cf
 )
 
 APERTURE_DISPATCH = {
@@ -14,6 +16,8 @@ APERTURE_DISPATCH = {
     "circular_annulus": circular_annulus_photometry_cf,
     "elliptical": elliptical_aperture_photometry_cf,
     "elliptical_annulus": elliptical_annulus_photometry_cf,
+    "rectangular":rectangular_aperture_photometry_cf,
+    "rectangular_annulus":rectangular_annulus_photometry_cf
 }
 FitsData = DataFactory("fits.data")
 

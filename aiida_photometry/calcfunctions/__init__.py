@@ -12,6 +12,8 @@ from .aperture import (
     circular_annulus_photometry_cf,
     elliptical_aperture_photometry_cf,
     elliptical_annulus_photometry_cf,
+    rectangular_aperture_photometry_cf,
+    rectangular_annulus_photometry_cf
 )
 
 from .calibration import (
@@ -33,6 +35,8 @@ __all__ = [
     "circular_annulus_photometry_cf",
     "elliptical_aperture_photometry_cf",
     "elliptical_annulus_photometry_cf",
+    "rectangular_aperture_photometry_cf"
+    "rectangular_annulus_photometry_cf"
 
     #calibration
     "create_master_bias",
