@@ -24,13 +24,6 @@ class SourceDetectionWorkChain(WorkChain):
         )
 
         spec.input(
-            "background",
-            valid_type=ArrayData,
-            required=False,
-            help="Optional background image to subtract",
-        )
-
-        spec.input(
             "detection_params",
             valid_type=Dict,
             default=lambda: Dict(dict={"threshold": 3.0, "fwhm": 3.0}),
@@ -62,11 +55,6 @@ class SourceDetectionWorkChain(WorkChain):
     def prepare_image(self):
         """Subtract background if provided and store in context."""
         image = self.inputs.image
-
-        if "background" in self.inputs:
-            bck = self.inputs.background.get_array("image")
-            image = image - bck
-
         self.ctx.image = image
 
     def detect_sources(self):

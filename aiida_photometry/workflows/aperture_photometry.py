@@ -39,13 +39,6 @@ class AperturePhotometryWorkChain(WorkChain):
         )
 
         spec.input(
-            "background",
-            valid_type=orm.ArrayData,
-            required=False,
-            help="Optional background image to subtract",
-        )
-
-        spec.input(
             "positions",
             valid_type=orm.ArrayData,
             help="Source positions with arrays 'x' and 'y'",
@@ -116,14 +109,6 @@ class AperturePhotometryWorkChain(WorkChain):
     def prepare_image(self):
         # TODO
         image = self.inputs.image
-
-        if "background" in self.inputs:
-            background = self.inputs.background.get_array("image")
-            image = image - background
-
-        # img = orm.ArrayData()
-        # img.set_array("image", image)
-
         self.ctx.image = image
 
     def run_photometry(self):

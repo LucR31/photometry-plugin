@@ -1,4 +1,4 @@
-from aiida.engine import WorkChain, submit
+from aiida.engine import WorkChain
 from aiida import orm
 from aiida.plugins import WorkflowFactory,DataFactory
 
@@ -6,16 +6,23 @@ FitsData = DataFactory("fits.data")
 # Load child workflows via entry points
 SourceDetectionWC = WorkflowFactory("centroid.detection")
 AperturePhotometryWC = WorkflowFactory("aperture.photometry")
+BackgroundWC = WorkflowFactory("background.estimation")
 
 
 class PhotometryPipelineWorkChain(WorkChain):
     """
-    End-to-end photometry pipeline:
+    End-to-end photometry pipeline
     """
 
     @classmethod
     def define(cls, spec):
         super().define(spec)
+
+        spec.expose_inputs(
+            BackgroundWC,
+            namespace="background",
+            exclude=("image"),
+        )
 
         spec.expose_inputs(
             SourceDetectionWC,
@@ -32,14 +39,19 @@ class PhotometryPipelineWorkChain(WorkChain):
         spec.input(
             "image",
             valid_type=FitsData,
-            help="Science image (2D array named 'image')",
+            help="Science image",
         )
 
         spec.input(
             "background",
             valid_type=orm.ArrayData,
             required=False,
-            help="Optional background image",
+            help="Optional precomputed background image.",
+        )
+
+        spec.expose_outputs(
+            BackgroundWC,
+            namespace="background",
         )
 
         spec.expose_outputs(
@@ -53,19 +65,28 @@ class PhotometryPipelineWorkChain(WorkChain):
         )
 
         spec.outline(
+            cls.run_background,
             cls.run_source_detection,
             cls.run_aperture_photometry,
             cls.finalize,
         )
+
+    def run_background(self):
+        if "background" in self.inputs:
+            pass
+        else:
+            self.ctx.bkg = self.submit(
+                BackgroundWC,
+                image=self.inputs.image,
+                method=self.inputs.bkg_method,
+                parameters=self.inputs.bkg_parameters,
+            )   
 
     def run_source_detection(self):
         """Run the source detection workflow."""
         inputs = self.exposed_inputs(SourceDetectionWC, namespace="detection")
 
         inputs["image"] = self.inputs.image
-
-        if "background" in self.inputs:
-            inputs["background"] = self.inputs.background
 
         future = self.submit(SourceDetectionWC, **inputs)
         return self.to_context(source_detection=future)

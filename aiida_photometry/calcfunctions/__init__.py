@@ -21,6 +21,11 @@ from .calibration import (
     calibrate_science
 )
 
+from .background import (
+    global_background_cf,
+    background_2d_cf
+)
+
 __all__ = [
     #centroids
     "centroid_com_cf",
@@ -41,6 +46,10 @@ __all__ = [
     #calibration
     "create_master_bias",
     "calibrate_science"
+
+    #background
+    "background_2d_cf",
+    "global_background_cf"
 
 ]
 
