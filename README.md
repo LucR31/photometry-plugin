@@ -17,6 +17,8 @@ Workflows:
 
 ![Diagram](provenance_graphs/provenance.png)
 
+![Diagram](provenance_graphs/cal_wf.png)
+
 
 ### Contact
 

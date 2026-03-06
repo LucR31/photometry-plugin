@@ -1,11 +1,11 @@
 from aiida.engine import calcfunction
-from aiida.orm import Dict, List
+from aiida.orm import Dict
 
-from astropy.nddata import CCDData
 import ccdproc
 import tempfile
 import os
 import numpy as np
+from astropy import units as u
 
 from aiida_photometry.data.fits_data import FitsData
 
@@ -36,18 +36,15 @@ def create_master_bias(parameters, **frames):
     Combine bias frames into master bias.
     """
     params = parameters.get_dict()
-    method = params.get("combine_method", "median")  # median as default!
-    sigma_clip = params.get("sigma_clip", True)  # true as default!
+    method = params.get("combine_method", "median")
+    sigma_clip = params.get("sigma_clip", True)
 
-    ccd_list = [f.get_ccddata() for f in frames.values()]
-
-    _validate_same_shape(ccd_list)
-
-    master = ccdproc.combine(ccd_list, method=method, sigma_clip=sigma_clip)
-
+    master = ccdproc.combine(
+        [f.get_ccddata() for f in frames.values()], method=method, sigma_clip=sigma_clip
+    )
     master.meta["CALTYPE"] = "MASTER_BIAS"
 
-    node = _write_ccd_to_fitsdata(
+    return _write_ccd_to_fitsdata(
         master,
         extra_attrs={
             "is_master": True,
@@ -56,41 +53,36 @@ def create_master_bias(parameters, **frames):
         },
     )
 
-    return node
-
 
 @calcfunction
-def create_master_dark(frames: List, master_bias: FitsData, parameters: Dict):
+def create_master_dark(master_bias: FitsData, parameters: Dict, **frames):
     """
     Create master dark from dark frames.
     """
     params = parameters.get_dict()
     method = params.get("combine_method", "median")
 
+    # Substract Bias
     bias_ccd = master_bias.get_ccddata()
+    calibrated = [ccdproc.subtract_bias(f.get_ccddata(), bias_ccd) for f in frames.values()]
 
-    calibrated = []
-    for f in frames:
-        dark_ccd = f.get_ccddata()
-        dark_sub = ccdproc.subtract_bias(dark_ccd, bias_ccd)
-        calibrated.append(dark_sub)
-
-    _validate_same_shape(calibrated)
-
+    # Combine Darks
     master = ccdproc.combine(calibrated, method=method)
     master.meta["CALTYPE"] = "MASTER_DARK"
 
-    node = _write_ccd_to_fitsdata(master)
-    node.base.attributes.set("is_master", True)
-    node.base.attributes.set("master_type", "dark")
-    node.base.attributes.set("combine_method", method)
-
-    return node
+    return _write_ccd_to_fitsdata(
+        master,
+        extra_attrs={
+            "is_master": True,
+            "master_type": "dark",
+            "combine_method": method,
+        },
+    )
 
 
 @calcfunction
 def create_master_flat(
-    frames: List, master_bias: FitsData, master_dark: FitsData, parameters: Dict
+    master_bias: FitsData, master_dark: FitsData, parameters: Dict, **frames
 ):
     """
     Create master flat (per filter).
@@ -103,11 +95,14 @@ def create_master_flat(
 
     calibrated = []
 
-    for f in frames:
+    for f in frames.values():
         flat_ccd = f.get_ccddata()
 
         flat_sub = ccdproc.subtract_bias(flat_ccd, bias_ccd)
-        flat_sub = ccdproc.subtract_dark(flat_sub, dark_ccd)
+        flat_sub = ccdproc.subtract_dark(flat_sub, dark_ccd,
+                                         exposure_time = "EXPTIME",
+                                         exposure_unit = u.second
+                                         )
 
         # Normalize by median
         norm_value = np.median(flat_sub.data)
@@ -115,17 +110,18 @@ def create_master_flat(
 
         calibrated.append(flat_norm)
 
-    _validate_same_shape(calibrated)
-
+    # Combine Flats
     master = ccdproc.combine(calibrated, method=method)
     master.meta["CALTYPE"] = "MASTER_FLAT"
 
-    node = _write_ccd_to_fitsdata(master)
-    node.base.attributes.set("is_master", True)
-    node.base.attributes.set("master_type", "flat")
-    node.base.attributes.set("combine_method", method)
-
-    return node
+    return _write_ccd_to_fitsdata(
+        master,
+        extra_attrs={
+            "is_master": True,
+            "master_type": "flat",
+            "combine_method": method,
+        },
+    )
 
 
 @calcfunction

@@ -18,6 +18,8 @@ from .aperture import (
 
 from .calibration import (
     create_master_bias,
+    create_master_dark,
+    create_master_flat,
     calibrate_science
 )
 
@@ -45,6 +47,8 @@ __all__ = [
 
     #calibration
     "create_master_bias",
+    "create_master_dark",
+    "create_master_flat",
     "calibrate_science"
 
     #background
