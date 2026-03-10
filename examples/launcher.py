@@ -52,5 +52,6 @@ builder.bias_frames = bias_nodes
 builder.dark_frames = dark_nodes
 builder.flat_frames = flat_nodes
 builder.raw_science = science_node
-builder.parameters = orm.Dict({"unit": "adu"})
+builder.parameters = orm.Dict({"unit": "adu",
+                               "substract_bias":True})
 result = run(builder)

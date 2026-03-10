@@ -55,16 +55,22 @@ def create_master_bias(parameters, **frames):
 
 
 @calcfunction
-def create_master_dark(master_bias: FitsData, parameters: Dict, **frames):
+def create_master_dark(master_bias: FitsData = None, parameters: Dict = None, **frames):
     """
     Create master dark from dark frames.
     """
     params = parameters.get_dict()
     method = params.get("combine_method", "median")
+    subtract_bias_flag = params.get("subtract_bias", True)
 
-    # Substract Bias
+    # Substract Bias if subtract_bias = True
     bias_ccd = master_bias.get_ccddata()
-    calibrated = [ccdproc.subtract_bias(f.get_ccddata(), bias_ccd) for f in frames.values()]
+    calibrated = [
+        ccdproc.subtract_bias(f.get_ccddata(), bias_ccd)
+        if subtract_bias_flag and master_bias is not None
+        else f.get_ccddata()
+        for f in frames.values()
+    ]
 
     # Combine Darks
     master = ccdproc.combine(calibrated, method=method)
@@ -76,6 +82,7 @@ def create_master_dark(master_bias: FitsData, parameters: Dict, **frames):
             "is_master": True,
             "master_type": "dark",
             "combine_method": method,
+            "bias_subtracted": subtract_bias_flag
         },
     )
 
@@ -99,10 +106,9 @@ def create_master_flat(
         flat_ccd = f.get_ccddata()
 
         flat_sub = ccdproc.subtract_bias(flat_ccd, bias_ccd)
-        flat_sub = ccdproc.subtract_dark(flat_sub, dark_ccd,
-                                         exposure_time = "EXPTIME",
-                                         exposure_unit = u.second
-                                         )
+        flat_sub = ccdproc.subtract_dark(
+            flat_sub, dark_ccd, exposure_time="EXPTIME", exposure_unit=u.second
+        )
 
         # Normalize by median
         norm_value = np.median(flat_sub.data)
@@ -121,6 +127,29 @@ def create_master_flat(
             "master_type": "flat",
             "combine_method": method,
         },
+    )
+
+
+@calcfunction
+def subtract_bias_cf(image: FitsData, master_bias: FitsData) -> FitsData:
+    """
+    Subtract master bias from an image.
+    """
+
+    return _write_ccd_to_fitsdata(
+        ccdproc.subtract_bias(image.get_ccddata(), master_bias.get_ccddata()),
+        extra_attrs = {"calibration": "bias_subtracted"},
+    )
+
+@calcfunction
+def flat_correct_cf(image: FitsData, master_flat: FitsData) -> FitsData:
+    """
+    Apply flat field correction.
+    """
+
+    return _write_ccd_to_fitsdata(
+        ccdproc.flat_correct(image.get_ccddata(), master_flat.get_ccddata()),
+        extra_attrs={"calibration": "flat_corrected"},
     )
 
 

@@ -9,17 +9,17 @@ Data:
 
 Workflows:
 - `images.reduction`: 
-- `aperture.photometry`:
+- `aperture.photometry`: Aperture photometry workflow.
 - `centroid.detection` :
 - `photometry.pipeline` : 
 
+
+
+
 ### Workflow example:
-
-![Diagram](provenance_graphs/provenance.png)
-
+![Diagram](provenance_graphs/Ap_wc.png)
 ![Diagram](provenance_graphs/cal_wf.png)
 
 
-### Contact
-
+## Contact
 lucas.fernandez3132@gmail.com
