@@ -71,12 +71,14 @@ class SourceDetectionWorkChain(WorkChain):
 
     def refine_sources(self):
         """Refine the detected source positions using centroid_sources calcfunction."""
-        self.ctx.refined_positions = centroid_sources_cf(
-            image=self.ctx.image,
-            positions=self.ctx.positions,
-            options=self.inputs.refine_params,
-        )
+        try:
+            self.ctx.refined_positions = centroid_sources_cf(
+                image=self.ctx.image,
+                positions=self.ctx.positions,
+                options=self.inputs.refine_params,
+            )
+        except:
+            self.ctx.refined_positions = self.ctx.positions
 
     def finalize(self):
-        """Expose refined sources as output."""
         self.out("sources", self.ctx.refined_positions)

@@ -12,7 +12,7 @@ from photutils.aperture import (
 )
 
 from aiida_photometry.data.fits_data import FitsData
-
+import numpy as np
 
 def _table_to_dict(table):
     data = {}
@@ -64,6 +64,9 @@ def circular_aperture_photometry_cf(
     apertures = CircularAperture(list(zip(x, y)), r=r)
 
     table = aperture_photometry(data, apertures, **options.get_dict())
+
+    valid = np.isfinite(table["aperture_sum"])
+    table = table[valid]
 
     return _table_to_dict(table)
 

@@ -4,10 +4,42 @@ from aiida_photometry.data.fits_data import FitsData
 from aiida.engine import calcfunction
 from aiida.orm import ArrayData, Dict
 from aiida.engine import calcfunction
+import ccdproc
+from astropy.nddata import CCDData
+import tempfile
+import numpy as np
+from astropy.io import fits
+import os
 
 from astropy.stats import sigma_clipped_stats
-import numpy as np
 
+
+@calcfunction
+def subtract_background(image: FitsData, background: ArrayData):
+
+    """
+    Subtract a background map from a FITS image while preserving headers and metadata.
+    """
+    img = image.get_ccddata()
+    header = img.header.copy()
+
+    bkg = np.asarray(background.get_array("background"), dtype=img.data.dtype)
+
+    if img.data.shape != bkg.shape:
+        raise ValueError("Image and background shape mismatch")
+    
+    new_data = img.data - bkg
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "background_subtracted.fits")
+
+        hdu = fits.PrimaryHDU(data=new_data, header=header)
+        hdu.writeto(path, overwrite=True)
+
+        node = FitsData(file=path)
+        node.base.attributes.set("background_subtracted", True)
+
+    return node
 
 @calcfunction
 def global_background_cf(
@@ -49,7 +81,7 @@ def global_background_cf(
 def background_2d_cf(
     image: FitsData,
     parameters: Dict,
-):
+) -> ArrayData:
     """
     Compute 2D background model.
 

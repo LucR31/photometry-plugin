@@ -2,27 +2,11 @@ from aiida.engine import calcfunction
 from aiida.orm import Dict
 
 import ccdproc
-import tempfile
-import os
 import numpy as np
 from astropy import units as u
 
 from aiida_photometry.data.fits_data import FitsData
-
-
-def _write_ccd_to_fitsdata(ccd, extra_attrs=None):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "output.fits")
-        ccd.write(path, overwrite=True)
-
-        node = FitsData(file=path)
-
-        if extra_attrs:
-            for k, v in extra_attrs.items():
-                node.base.attributes.set(k, v)
-
-        return node
-
+from aiida_photometry.utils import _write_ccd_to_fitsdata
 
 def _validate_same_shape(ccd_list):
     shapes = [ccd.data.shape for ccd in ccd_list]

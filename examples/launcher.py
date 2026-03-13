@@ -4,54 +4,43 @@ from astropy.io import fits
 from aiida import orm
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.engine import run
+from aiida import load_profile, orm, plugins, engine
+from aiida.plugins import DataFactory
+from photutils.datasets import load_star_image
+import tempfile
 
 FitsData = DataFactory("fits.data")
 
-bias_dir = "/home/jovyan/work/data/calibration_images/2026-02-27_14_24_Bias"
-dark_dir = "/home/jovyan/work/data/calibration_images/2026-02-27_14_21_Dark_10s"
+hdu_M67 = load_star_image()
+def hdu_to_fitsdata(hdu):
+    """
+    Convert an in-memory HDUList to FitsData.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".fits", delete=False) as tmp:
+        hdu.writeto(tmp.name, overwrite=True)
+        path = os.path.abspath(tmp.name)
 
-bias_nodes = {}
-for i, filename in enumerate(sorted(os.listdir(bias_dir))):
-    if filename.endswith(".fit"):
-        path = os.path.abspath(os.path.join(bias_dir, filename))
-        node = FitsData(file=path).store()
-        bias_nodes[f"bias_{i}"] = node
+    node = FitsData(file=path).store()
 
-dark_nodes = {}
-for i, filename in enumerate(sorted(os.listdir(dark_dir))):
-    if filename.endswith(".fit"):
-        path = os.path.abspath(os.path.join(dark_dir, filename))
-        node = FitsData(file=path).store()
-        dark_nodes[f"dark_{i}"] = node
+    # Optional cleanup of temp file
+    os.remove(path)
 
-flat_nodes = {}
-for i, filename in enumerate(sorted(os.listdir(dark_dir))):
-    if filename.endswith(".fit"):
-        path = os.path.abspath(os.path.join(dark_dir, filename))
-        node = FitsData(file=path).store()
-        flat_nodes[f"flat_{i}"] = node
-
-def create_synthetic_fits(path, value, shape=(50, 50)):
-    """Create a FITS file with constant pixel values."""
-    data = np.full(shape, value, dtype=np.float32)
-    hdu = fits.PrimaryHDU(data)
-    hdu.header["BUNIT"] = "adu"
-    hdu.header["EXPTIME"] = 60.0
-    hdu.header["FILTER"] = "R"
-    hdu.writeto(path, overwrite=True)
-    return path
-
-# Synthetic science frame
-science_path = create_synthetic_fits("science.fits", value=1100)
-science_node = FitsData(file=os.path.abspath(science_path)).store()
+    return node
 
 # BUILDER
-WorkflowClass = WorkflowFactory("images.reduction")
-builder = WorkflowClass.get_builder()
-builder.bias_frames = bias_nodes
-builder.dark_frames = dark_nodes
-builder.flat_frames = flat_nodes
-builder.raw_science = science_node
-builder.parameters = orm.Dict({"unit": "adu",
-                               "substract_bias":True})
-result = run(builder)
+workflow_pipeline = plugins.WorkflowFactory('photometry.pipeline')
+image_node = hdu_to_fitsdata(hdu_M67)
+ 
+builder = workflow_pipeline.get_builder()
+builder.detection.detection_params = orm.Dict(dict = {"threshold": 3,
+                                                "min_separation": 5})
+    
+#builder.aperture.aperture = orm.Dict(dict= "exact")
+#builder.aperture.method = orm.Str("exact")
+#builder.aperture.photometry_options = orm.Dict(dict={"method":5}) 
+builder.background.method = orm.Str("background_2d")
+builder.background.parameters = orm.Dict(dict={})
+builder.image = image_node
+    
+#run
+engine.run(builder)

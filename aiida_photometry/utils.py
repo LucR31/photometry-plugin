@@ -2,6 +2,9 @@ import ccdproc
 import ast
 import numpy as np
 from aiida import orm
+import tempfile
+import os
+from aiida_photometry.data.fits_data import FitsData
 
 
 
@@ -32,3 +35,16 @@ def positions_from_string(pos_string):
     array_positions.set_array("y", positions[:, 1])
 
     return array_positions
+
+def _write_ccd_to_fitsdata(ccd, extra_attrs=None):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "output.fits")
+        ccd.write(path, overwrite=True)
+
+        node = FitsData(file=path)
+
+        if extra_attrs:
+            for k, v in extra_attrs.items():
+                node.base.attributes.set(k, v)
+
+        return node

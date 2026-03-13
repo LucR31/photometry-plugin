@@ -24,7 +24,7 @@ class BackgroundWorkChain(WorkChain):
             cls.run_background,
         )
 
-        spec.output("result")
+        spec.output("background")
 
     def run_background(self):
 
@@ -45,4 +45,4 @@ class BackgroundWorkChain(WorkChain):
         else:
             raise ValueError(f"Unknown background method: {method}")
 
-        self.out("result", result)
+        self.out("background", result)

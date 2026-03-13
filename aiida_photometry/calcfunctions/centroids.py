@@ -118,9 +118,17 @@ def centroid_sources_cf(
 
     xcen, ycen = centroid_sources(img_array, xpos, ypos, **kwargs)
 
+    xcen = np.array(xcen, dtype=float)[:10]
+    ycen = np.array(ycen, dtype=float)[:10]
+    
+    # Clean NaNs/Infs
+    xcen = np.nan_to_num(xcen, nan=-1.0, posinf=-1.0, neginf=-1.0)
+    ycen = np.nan_to_num(ycen, nan=-1.0, posinf=-1.0, neginf=-1.0)
+
+    # Store in ArrayData
     result = ArrayData()
-    result.set_array("x", np.array(xcen, dtype=float))
-    result.set_array("y", np.array(ycen, dtype=float))
+    result.set_array("x", xcen)
+    result.set_array("y", ycen)
     return result
 
 
@@ -137,7 +145,7 @@ def detect_sources_cf(image: FitsData, options: Dict) -> ArrayData:
 
     threshold = kwargs.get("threshold", 3.0)
     fwhm = kwargs.get("fwhm", 3.0)
-    daofinder = DAOStarFinder(threshold=threshold, fwhm=fwhm)
+    daofinder = DAOStarFinder(threshold=threshold, fwhm=fwhm, exclude_border = True)
 
     sources_table = daofinder(img_array)
 

@@ -25,7 +25,8 @@ from .calibration import (
 
 from .background import (
     global_background_cf,
-    background_2d_cf
+    background_2d_cf,
+    subtract_background
 )
 
 __all__ = [
@@ -53,7 +54,8 @@ __all__ = [
 
     #background
     "background_2d_cf",
-    "global_background_cf"
+    "global_background_cf",
+    "subtract_background"
 
 ]
 

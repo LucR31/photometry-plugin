@@ -1,6 +1,7 @@
 from aiida.engine import WorkChain
 from aiida import orm
 from aiida.plugins import WorkflowFactory,DataFactory
+from aiida_photometry.calcfunctions import subtract_background
 
 FitsData = DataFactory("fits.data")
 # Load child workflows via entry points
@@ -43,7 +44,7 @@ class PhotometryPipelineWorkChain(WorkChain):
         )
 
         spec.input(
-            "background",
+            "background_map",
             valid_type=orm.ArrayData,
             required=False,
             help="Optional precomputed background image.",
@@ -66,27 +67,37 @@ class PhotometryPipelineWorkChain(WorkChain):
 
         spec.outline(
             cls.run_background,
+            cls.subtract_background,
             cls.run_source_detection,
             cls.run_aperture_photometry,
             cls.finalize,
         )
 
     def run_background(self):
-        if "background" in self.inputs:
-            pass
+        if "background_map" in self.inputs:
+            self.ctx.background = self.inputs.background
+            return
+        
+        inputs = self.exposed_inputs(BackgroundWC, namespace="background")
+        inputs["image"] = self.inputs.image
+        future = self.submit(BackgroundWC, **inputs)
+        return self.to_context(bkg=future)
+    
+    def subtract_background(self):
+        if "background_map" in self.inputs:
+            background = self.inputs.background
         else:
-            self.ctx.bkg = self.submit(
-                BackgroundWC,
-                image=self.inputs.image,
-                method=self.inputs.bkg_method,
-                parameters=self.inputs.bkg_parameters,
-            )   
+            background = self.ctx.bkg.outputs.background
 
+        self.ctx.image_sub = subtract_background(
+            self.inputs.image,
+            background,
+        )
     def run_source_detection(self):
         """Run the source detection workflow."""
         inputs = self.exposed_inputs(SourceDetectionWC, namespace="detection")
 
-        inputs["image"] = self.inputs.image
+        inputs["image"] = self.ctx.image_sub
 
         future = self.submit(SourceDetectionWC, **inputs)
         return self.to_context(source_detection=future)
@@ -95,7 +106,7 @@ class PhotometryPipelineWorkChain(WorkChain):
         """Run aperture photometry using detected source positions."""
         inputs = self.exposed_inputs(AperturePhotometryWC, namespace="aperture")
 
-        inputs["image"] = self.inputs.image
+        inputs["image"] = self.ctx.image_sub
         inputs["positions"] = self.ctx.source_detection.outputs.sources
 
         future = self.submit(AperturePhotometryWC, **inputs)

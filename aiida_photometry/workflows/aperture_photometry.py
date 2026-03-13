@@ -47,7 +47,7 @@ class AperturePhotometryWorkChain(WorkChain):
         spec.input(
             "aperture",
             valid_type=orm.Dict,
-            default=lambda: orm.Dict(dict={"r": 5.0}),
+            default=lambda: orm.Dict(dict={"r": 2.0}),
             help="Aperture geometry parameters",
         )
 
